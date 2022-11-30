@@ -178,13 +178,13 @@ function H = newhatch(A,opts,props)
 % 6. plot the hatching line
 
 % traverse if hggroup/hgtransform
+if isnumeric(A);A=get(A);A.Children=A.children;A.Visible=A.visible;A.Parent=A.parent;A.DisplayName=A.displayname;end;
 if ishghandlehere(A,'hggroup')
    if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
       H = cell(1,numel(A));
    else
       H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
    end
-   if isnumeric(A);A=get(A);A.Children=A.children;end;
    for n = 1:numel(A.Children)
       %try
          H{n} = newhatch(A.Children(n),opts,props);
@@ -293,6 +293,7 @@ try
    end
 
 catch ME
+   if isnumeric(A);A=get(A);end;
    % something went wrong, restore the base object properties
    if ~isempty(props)
       for pname = fieldnames(pvalold)'
@@ -305,7 +306,7 @@ catch ME
          end
       end
    end
-   ME.rethrow();
+   if ~exist('octave_core_file_name');ME.rethrow();else;rethrow(ME);end;
 end
 
 end
@@ -500,8 +501,10 @@ end
 % synchronize hatching line color to the patch's edge color if HatchColor =
 % 'auto'
 function syncColor(H,A)
-
-if ~getappdata(H,'HatchFill2MatchColor')
+tmp=getappdata(H,'HatchFill2MatchColor');
+if exist('octave_core_file_name') && tmp=={};
+   return;
+elseif ~getappdata(H,'HatchFill2MatchColor')
    % do not sync
    return;
 end
@@ -531,6 +534,7 @@ function [V,F,FillFcns] = gethgdata(A)
 % properties to observe change in the hatching area
 
 % initialize the output variable
+if  ~exist('isvalid');isvalid=@(x)true;end;
 F = [];
 V = [];
 FillFcns = {};
