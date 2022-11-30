@@ -28,7 +28,7 @@ hp = findobj(ax1,'Tag','HatchingRegion');
 if ~exist('octave_core_file_name');hh = hatchfill2(hp,'cross','LineWidth',1,'Fill','off');
 else;hh = hatchfill2(hp,'cross','LineWidth',1);end;
 title('Example 1: hatchfill2(hp,''HatchColor'',''w'',''FaceColor'',''none'')');
-
+if 0;
 % Example 2: Set logarithmic yscale and reverse yaxis & speckle
 set(ax2,'ylim',[50 700],'yscale','log','ydir','reverse');
 hp = findobj(ax2,'Tag','HatchingRegion');
@@ -72,3 +72,4 @@ hatchfill2(hx,'cross','LineWidth',1,'FaceColor','none','HatchStyle','single','Ha
 %IMAG PROJECTION
 hy = patch('XData',[t(1);t;t(end)],'YData',zeros(length(t)+2,1),'ZData',[0;y;0],'FaceColor','b','EdgeColor','b','LineWidth',1,'EdgeAlpha',0.5,'FaceAlpha',0.15);
 hatchfill2(hy,'cross','LineWidth',1,'FaceColor','none','HatchStyle','single','HatchAngle',90,'HatchDensity',50);
+end;
