@@ -502,7 +502,7 @@ end
 % 'auto'
 function syncColor(H,A)
 tmp=getappdata(H,'HatchFill2MatchColor');
-if exist('octave_core_file_name') && tmp=={};
+if exist('octave_core_file_name') && numel(tmp)==0;
    return;
 elseif ~getappdata(H,'HatchFill2MatchColor')
    % do not sync
