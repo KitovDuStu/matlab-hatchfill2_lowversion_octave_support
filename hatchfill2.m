@@ -106,7 +106,7 @@ else
 end
 for n = 1:numel(A)
    H{n} = newhatch(A(n),opts,props);
-   
+
    % if legend of A(n) is shown, add hatching to it as well
    %    leg = handle(legend(ancestor(A,'axes')));
    %    hsrc = [leg.EntryContainer.Children.Object];
@@ -130,6 +130,37 @@ end
 
 end
 
+
+function b = isHGHandleOfType(val, type)
+% Returns true if val is a hghandle and is the same type as the input type.
+
+% Copyright 2012-2017 The MathWorks, Inc.
+
+if exist('octave_core_file_name');
+convertStringsToChars=@(x)x;
+%do nothing for octave
+end;
+%input must be cell of character scalar vector or
+
+if nargin > 0
+    val = convertStringsToChars(val);
+end
+
+if nargin > 1
+    type = convertStringsToChars(type);
+end
+
+b = isgraphics(val) && strcmpi(get(val,'Type'),type); % ishghandlehere(val)
+end
+
+function ret = ishghandlehere(x,t)
+if ~exist('octave_core_file_name');
+   ret=ishghandle(x,t);
+else;
+   ret=isHGHandleOfType(x,t);
+end;
+end
+
 function H = newhatch(A,opts,props)
 
 % 0. retrieve pixel-data conversion parameters
@@ -147,14 +178,14 @@ if ishghandle(A,'hggroup')
    else
       H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
    end
-   
+
    for n = 1:numel(A.Children)
       try
          H{n} = newhatch(A.Children(n),opts,props);
       catch
       end
    end
-   
+
    H = [H{:}];
    return;
 end
@@ -177,14 +208,14 @@ try
       A.Visible = 'on'; % momentarily make the patch visible
       drawnow;
    end
-   
+
    % get the base object's vertices & faces
    [V,F,FillFcns] = gethgdata(A); % object does not have its patch data ready
-   
+
    if redraw
       A.Visible = 'off'; % momentarily make the patch visible
    end
-   
+
    if ~isempty(FillFcns)
       FillFcns{1}();
       drawnow;
@@ -192,10 +223,10 @@ try
       FillFcns{2}();
       drawnow;
    end
-   
+
    % recompute hatch line data
    [X,Y,Z] = computeHatchData(handle(ancestor(A,'axes')),V,F,opts);
-   
+
    % 6. plot the hatching line
    commonprops = {'Parent',A.Parent,'DisplayName',A.DisplayName,'Visible',vis};
    if ~strcmp(opts.HatchColor,'auto')
@@ -207,26 +238,26 @@ try
       H = line(X,Y,Z,commonprops{:},'LineStyle','none','Marker',opts.SpeckleMarkerStyle,...
          'MarkerSize',opts.SpeckleSize,'Parent',A.Parent,'DisplayName',A.DisplayName);
    end
-   
+
    if strcmp(opts.HatchColor,'auto')
       syncColor(H,A);
    end
-   
+
    if isempty(H)
       error('Unable to obtain hatching data from the specified object A.');
    end
-   
+
    % 7. Move H so that it is place right above A in parent's uistack
    p = handle(A.Parent);
    Hcs = handle(p.Children);
    [~,idx] = ismember(A,Hcs); % always idx(1)>idx(2) as H was just created
    p.Children = p.Children([2:idx-1 1 idx:end]);
-   
+
    % if HG1, all done | no dynamic adjustment support
    if verLessThan('matlab','8.4')
       return;
    end
-   
+
    % save the config data & set up the object listeners
    setappdata(A,'HatchFill2Opts',opts); % hatching options
    setappdata(A,'HatchFill2Obj',H); % hatching line object
@@ -237,24 +268,24 @@ try
    setappdata(H,'HatchFill2MatchVisible',vislisena);
    setappdata(H,'HatchFill2MatchColor',strcmp(opts.HatchColor,'auto'));
    setappdata(H,'HatchFill2Patch',A); % base object
-   
+
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % Create listeners for active formatting
-   
+
    addlistener(H,'ObjectBeingDestroyed',@hatchBeingDeleted);
-   
+
    lis = [
       addlistener(A,'Reparent',@objReparent)
       addlistener(A,'ObjectBeingDestroyed',@objBeingDeleted);
       addlistener(A,'MarkedClean',@objMarkedClean)
       addlistener(A,'LegendEntryDirty',@(h,evt)[])]; % <- study this later
-   
+
    syncprops = {'Clipping','HitTest','Interruptible','BusyAction','UIContextMenu'};
    syncprops(~cellfun(@(p)isprop(A,p),syncprops)) = [];
    for n = 1:numel(syncprops)
       lis(n+2) = addlistener(A,syncprops{n},'PostSet',@syncProperty);
    end
-   
+
 catch ME
    % something went wrong, restore the base object properties
    if ~isempty(props)
@@ -318,10 +349,10 @@ if ~rehatch % if visible already 'on', check for the change in object data
 end
 
 % rehatch if patch data/visibility changed
-if rehatch 
+if rehatch
    % recompute hatch line data
    [X,Y,Z] = computeHatchData(ancestor(H,'axes'),V,F,getappdata(hp,'HatchFill2Opts'));
-   
+
    % update the hatching line data
    set(H,'XData',X,'YData',Y,'ZData',Z);
 
@@ -387,10 +418,10 @@ function hatchBeingDeleted(hh,~)
 %when hatch line object (hh) is deleted
 
 if isappdata(hh,'HatchFill2Patch')
-   
+
    %   remove listeners listening to the patch object
    hp = getappdata(hh,'HatchFill2Patch');
-   
+
    if isappdata(hp,'HatchFill2Listeners')
       delete(getappdata(hp,'HatchFill2Listeners'));
       rmappdata(hp,'HatchFill2Listeners');
@@ -412,23 +443,24 @@ end
 N = size(F,1);
 XYZc = cell(2,N);
 for n = 1:N % for each face
-   
+
    % 2. get xdata & ydata of the vertices of the face in transformed bases
    f = F(n,:); % get indices to the vertices of the face
    f(isnan(f)) = [];
-   
+
    [v,T,islog] = transform_data(ax,V(f,:),[]); % transform the face
    if isempty(v) % face is not hatchable
       continue;
+      continue;
    end
-   
+
    % 2. get xdata & ydata of hatching lines for each face
    if any(strcmp(opts.HatchStyle,{'speckle','outsidespeckle'}))
       xy = hatch_xy(v.',opts.HatchStyle,opts.SpeckleWidth,opts.SpeckleDensity,opts.HatchOffset);
    else
       xy = hatch_xy(v.',opts.HatchStyle,opts.HatchAngle,opts.HatchDensity,opts.HatchOffset);
    end
-   
+
    % 3. revert the bases back to 3D Eucledian space
    XYZc{1,n} = revert_data(xy',T,islog).';
 end
@@ -516,7 +548,7 @@ elseif ishghandle(A,'surface') % HG2
    end
    [V,F] = getQuadrilateralData(A.Face);
 elseif ishghandle(A,'contour') % HG2
-   
+
    % Retrieve data from hidden FacePrims property (a TriangleStrip object)
    if strcmp(A.Fill,'off')
       FillFcns = {@()set(A,'Fill','on'),@()set(A,'Fill','off')};
@@ -638,7 +670,7 @@ if ishghandle(A,'hggroup')
       A.(pnames{i}) = props.(pnames{i});
    end
    props = rmfield(props,pnames(idx));
-   
+
    h = handle(A.Children);
    for n = 1:numel(h)
       pvalold1 = sethgprops(h(n),props);
@@ -793,27 +825,27 @@ yi = reshape(yi,2,li/2);
 % The speckly part - instead of taking the line we make a point some
 % random distance in.
 if length(speckle)>1 || speckle(1)~=0
-   
+
    if length(speckle)>1
       % Now we get the speckle parameter for each line.
-      
+
       % First, carry over the speckle parameter for the segment
       %   yd=[0 speckle(1:end-1)];
       yd = speckle(1:end);
       A=repmat(yd(fnd),dm,1);
       speckle=A(fnd1);
-      
+
       % Now give it the same preconditioning as for xi/yi
       speckle=speckle(num);
       if rem(length(speckle),2)==1
          speckle = [speckle; speckle(end)];
       end
       speckle=reshape(speckle,2,li/2);
-      
+
    else
       speckle=[speckle;speckle];
    end
-   
+
    % Thin out the points in narrow parts.
    % This keeps everything when abs(dxi)>2*speckle, and then makes
    % it increasingly sparse for smaller intervals.
@@ -1033,30 +1065,30 @@ if isscalar(zq) % patch is on a xy-plane
    end
 else
    % if patch is not on a same xy-plane
-   
+
    % use 3 points likely well separated
    idx = round((0:2)/2*(Nq-1))+1;
-   
+
    % find unit normal vector of the patch plane
    norm = cross(Vq(idx(1),:)-Vq(idx(3),:),Vq(idx(2),:)-Vq(idx(3),:)); % normal vector
    norm(:) = norm/sqrt(sum(norm.^2));
-   
+
    % define the spatial rotation
    theta = acos(norm(3));
    if theta>pi/2, theta = theta-pi; end
    u = [norm(2) -norm(1) 0];
    Trot = makehgtform('axisrotate',u,theta);
-   
+
    % project the reference point onto the plane
    P = norm.'*norm;
    ref_proj = ref*(eye(3) - P) + Vq(1,:)*P;
    if norm(3)
       T = makehgtform('translate', -ref_proj); % user specified reference point or -d/norm(3) for z-crossing
    end
-   
+
    % apply the rotation now
    T(:) = Trot*T;
-   
+
    % find the axes limits on the transformed space
    %    [Xlims,Ylims,Zlims] = ndgrid(xl,yl,zl);
    %    Vlims = [Xlims(:) Ylims(:) Zlims(:)];
