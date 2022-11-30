@@ -99,7 +99,7 @@ narginchk(1,inf);
 
 drawnow % make sure the base objects are already drawn
 
-if verLessThan('matlab','8.4')
+if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
    H = cell(1,numel(A));
 else
    H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
@@ -179,7 +179,7 @@ function H = newhatch(A,opts,props)
 
 % traverse if hggroup/hgtransform
 if ishghandlehere(A,'hggroup')
-   if verLessThan('matlab','8.4')
+   if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
       H = cell(1,numel(A));
    else
       H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
@@ -260,7 +260,7 @@ try
    p.Children = p.Children([2:idx-1 1 idx:end]);
 
    % if HG1, all done | no dynamic adjustment support
-   if verLessThan('matlab','8.4')
+   if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
       return;
    end
 
