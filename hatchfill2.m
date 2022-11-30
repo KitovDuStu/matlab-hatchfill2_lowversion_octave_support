@@ -184,12 +184,12 @@ if ishghandlehere(A,'hggroup')
    else
       H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
    end
-
+   if isnumeric(A);A=get(A);A.Children=A.children;end;
    for n = 1:numel(A.Children)
-      try
+      %try
          H{n} = newhatch(A.Children(n),opts,props);
-      catch
-      end
+      %catch
+      %end
    end
 
    H = [H{:}];
@@ -686,6 +686,7 @@ if ishghandlehere(A,'hggroup')
       end
    end
 else
+   if isnumeric(A);A=get(A);end;
    for n = 1:numel(pnames)
       pvalold.(pnames{n}) = A.(pnames{n});
       A.(pnames{n}) = props.(pnames{n});
