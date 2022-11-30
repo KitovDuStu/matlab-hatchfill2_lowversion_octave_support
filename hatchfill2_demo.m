@@ -25,7 +25,8 @@ ax2 = copyobj(ax1,figure);
 
 % Example 1: Default hatching
 hp = findobj(ax1,'Tag','HatchingRegion');
-hh = hatchfill2(hp,'cross','LineWidth',1,'Fill','off');
+if ~exist('octave_core_file_name');hh = hatchfill2(hp,'cross','LineWidth',1,'Fill','off');
+else;hh = hatchfill2(hp,'cross','LineWidth',1);end;
 title('Example 1: hatchfill2(hp,''HatchColor'',''w'',''FaceColor'',''none'')');
 
 % Example 2: Set logarithmic yscale and reverse yaxis & speckle
