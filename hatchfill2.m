@@ -155,7 +155,7 @@ end
 
 function ret = ishghandlehere(x,t)
 if ~exist('octave_core_file_name');
-   ret=ishghandle(x,t);
+   ret=ishghandlehere(x,t);
 else;
    ret=isHGHandleOfType(x,t);
 end;
@@ -172,7 +172,7 @@ function H = newhatch(A,opts,props)
 % 6. plot the hatching line
 
 % traverse if hggroup/hgtransform
-if ishghandle(A,'hggroup')
+if ishghandlehere(A,'hggroup')
    if verLessThan('matlab','8.4')
       H = cell(1,numel(A));
    else
@@ -482,9 +482,9 @@ supported_objtypes = {'patch','hggroup','bar','contour','area','surface','histog
 if isempty(hbase)
    tf = false;
 else
-   tf = ishghandle(hbase,supported_objtypes{1});
+   tf = ishghandlehere(hbase,supported_objtypes{1});
    for n = 2:numel(supported_objtypes)
-      tf(:) = tf | ishghandle(hbase,supported_objtypes{n});
+      tf(:) = tf | ishghandlehere(hbase,supported_objtypes{n});
    end
    tf = all(tf);
 end
@@ -500,10 +500,10 @@ if ~getappdata(H,'HatchFill2MatchColor')
    return;
 end
 
-if ishghandle(A,'patch') || ishghandle(A,'Bar') || ishghandle(A,'area') ...
-      || ishghandle(A,'surface') || ishghandle(A,'Histogram') %HG2
+if ishghandlehere(A,'patch') || ishghandlehere(A,'Bar') || ishghandlehere(A,'area') ...
+      || ishghandlehere(A,'surface') || ishghandlehere(A,'Histogram') %HG2
    pname = 'EdgeColor';
-elseif ishghandle(A,'contour') % HG2
+elseif ishghandlehere(A,'contour') % HG2
    pname = 'LineColor';
 end
 color = A.(pname);
@@ -533,21 +533,21 @@ if ~isvalid(A) || strcmp(A.Visible,'off')
    return;
 end
 
-if ishghandle(A,'patch')
+if ishghandlehere(A,'patch')
    V = A.Vertices;
    F = A.Faces;
-elseif ishghandle(A,'bar')
+elseif ishghandlehere(A,'bar')
    [V,F] = getQuadrilateralData(A.Face);
-elseif ishghandle(A,'area')
+elseif ishghandlehere(A,'area')
    [V,F] = getTriangleStripData(A.Face);
    set(A,'FaceColor','none');
-elseif ishghandle(A,'surface') % HG2
+elseif ishghandlehere(A,'surface') % HG2
    if strcmp(A.FaceColor,'none')
       FillFcns = {@()set(A,'FaceColor','w'),@()set(A,'FaceColor','none')};
       return;
    end
    [V,F] = getQuadrilateralData(A.Face);
-elseif ishghandle(A,'contour') % HG2
+elseif ishghandlehere(A,'contour') % HG2
 
    % Retrieve data from hidden FacePrims property (a TriangleStrip object)
    if strcmp(A.Fill,'off')
@@ -555,7 +555,7 @@ elseif ishghandle(A,'contour') % HG2
       return;
    end
    [V,F] = getTriangleStripData(A.FacePrims);
-elseif ishghandle(A,'histogram') %HG2: Quadrateral underlying data object
+elseif ishghandlehere(A,'histogram') %HG2: Quadrateral underlying data object
    [V,F] = getQuadrilateralData(A.NodeChildren(4));
 end
 
@@ -661,7 +661,7 @@ function pvalold = sethgprops(A,props)
 % grab the common property names of the base objects
 
 pnames = fieldnames(props);
-if ishghandle(A,'hggroup')
+if ishghandlehere(A,'hggroup')
    gpnames = fieldnames(set(A));
    [tf,idx] = ismember(gpnames,pnames);
    idx(~tf) = [];
@@ -961,13 +961,13 @@ function pnames = getcommonprops(h)
 
 V = set(h(1));
 pnames = fieldnames(V);
-if ishghandle(h(1),'hggroup')
+if ishghandlehere(h(1),'hggroup')
    pnames = union(pnames,getcommonprops(get(h(1),'Children')));
 end
 for n = 2:numel(h)
    V = set(h(n));
    pnames1 = fieldnames(V);
-   if ishghandle(h(n),'hggroup')
+   if ishghandlehere(h(n),'hggroup')
       pnames1 = union(pnames1,getcommonprops(get(h(n),'Children')));
    end
    pnames = intersect(pnames,pnames1);
