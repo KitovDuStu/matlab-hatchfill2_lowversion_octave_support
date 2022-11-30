@@ -161,6 +161,12 @@ else;
 end;
 end
 
+function ret=newhandle(val)
+if exist('octave_core_file_name');ret=val;
+else;ret=newhandle(val);
+end;
+end
+
 function H = newhatch(A,opts,props)
 
 % 0. retrieve pixel-data conversion parameters
@@ -225,7 +231,7 @@ try
    end
 
    % recompute hatch line data
-   [X,Y,Z] = computeHatchData(handle(ancestor(A,'axes')),V,F,opts);
+   [X,Y,Z] = computeHatchData(newhandle(ancestor(A,'axes')),V,F,opts);
 
    % 6. plot the hatching line
    commonprops = {'Parent',A.Parent,'DisplayName',A.DisplayName,'Visible',vis};
@@ -248,8 +254,8 @@ try
    end
 
    % 7. Move H so that it is place right above A in parent's uistack
-   p = handle(A.Parent);
-   Hcs = handle(p.Children);
+   p = newhandle(A.Parent);
+   Hcs = newhandle(p.Children);
    [~,idx] = ismember(A,Hcs); % always idx(1)>idx(2) as H was just created
    p.Children = p.Children([2:idx-1 1 idx:end]);
 
@@ -377,7 +383,7 @@ end
 
 function syncProperty(~,evt)
 % sync Visible property to the patch object
-hp = handle(evt.AffectedObject); % patch object
+hp = newhandle(evt.AffectedObject); % patch object
 hh = getappdata(hp,'HatchFill2Obj');
 hh.(evt.Source.Name) = hp.(evt.Source.Name);
 end
@@ -395,7 +401,7 @@ H = getappdata(hp,'HatchFill2Obj');
 H.Parent = pnew;
 
 % make sure to move the hatch line object right above the patch object
-Hcs = handle(pnew.Children);
+Hcs = newhandle(pnew.Children);
 [~,idx] = ismember(hp,Hcs); % always idx(1)>idx(2) as H was just moved
 pnew.Children = pnew.Children([2:idx-1 1 idx:end]);
 
@@ -671,7 +677,7 @@ if ishghandlehere(A,'hggroup')
    end
    props = rmfield(props,pnames(idx));
 
-   h = handle(A.Children);
+   h = newhandle(A.Children);
    for n = 1:numel(h)
       pvalold1 = sethgprops(h(n),props);
       ponames = fieldnames(pvalold1);
@@ -887,7 +893,7 @@ patchtypes = {'single','cross','speckle','outspeckle','fill','none'};
 if ~issupported(h)
    error('Unsupported graphics handle type.');
 end
-h = handle(h);
+h = newhandle(h);
 
 % get common property names
 pnames = getcommonprops(h);
