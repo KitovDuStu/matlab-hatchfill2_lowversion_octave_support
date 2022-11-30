@@ -18,7 +18,7 @@ hold on;
 % plot hatching region:
 % zone(40:60,15:20) = nan; % force errorneous case
 [c2,h2] = contour(lat2,p2,zone,[2 2]); % plots only the 2 contour
-set(h2,'linestyle','-','Tag','HatchingRegion');
+set(h2,'linestyle','none','Tag','HatchingRegion');
 hold off;                                 % if you want to have more control
 ax1 = gca;
 ax2 = copyobj(ax1,figure);
