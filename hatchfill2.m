@@ -1,7 +1,7 @@
 function H = hatchfill2(A,varargin)
 % HATCHFILL2 Hatching and speckling of patch objects
-%   HATCHFILL2(A) fills the patch(es) with handle(s) A. A can be a vector
-%   of handles or a single handle. If A is a vector, then all objects of A
+%   HATCHFILL2(A) fills the patch(es) with newhandle(s) A. A can be a vector
+%   of handles or a single newhandle. If A is a vector, then all objects of A
 %   should be part of the same group for predictable results. The hatch
 %   consists of black lines angled at 45 degrees at 40 hatching lines over
 %   the axis span with no color filling between the lines.
@@ -94,21 +94,32 @@ function H = hatchfill2(A,varargin)
 %     and borrowed code therein from R. Pawlowicz, K. Pankratov, and
 %     Iram Weinstein.
 
+%global newhandle;
+%if ~exist('newhandle'); global newhandle = @(x)x; end;
+%this is local-area global var defining but failed
+
 narginchk(1,inf);
 [A,opts,props] = parse_input(A,varargin);
 
 drawnow % make sure the base objects are already drawn
 
-if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
+if ~exist('octave_core_file_name');
+   verless=verLessThan('matlab','8.4');
+ else;
+   verless=1;
+end;
+if verless;
    H = cell(1,numel(A));
 else
    H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
 end
+
+
 for n = 1:numel(A)
    H{n} = newhatch(A(n),opts,props);
 
    % if legend of A(n) is shown, add hatching to it as well
-   %    leg = handle(legend(ancestor(A,'axes')));
+   %    leg = newhandle(legend(ancestor(A,'axes')));
    %    hsrc = [leg.EntryContainer.Children.Object];
    %    hlc = leg.EntryContainer.Children(find(hsrc==A(n),1));
    %    if ~isempty(hlc)
@@ -130,43 +141,6 @@ end
 
 end
 
-
-function b = isHGHandleOfType(val, type)
-% Returns true if val is a hghandle and is the same type as the input type.
-
-% Copyright 2012-2017 The MathWorks, Inc.
-
-if exist('octave_core_file_name');
-convertStringsToChars=@(x)x;
-%do nothing for octave
-end;
-%input must be cell of character scalar vector or
-
-if nargin > 0
-    val = convertStringsToChars(val);
-end
-
-if nargin > 1
-    type = convertStringsToChars(type);
-end
-
-b = isgraphics(val) && strcmpi(get(val,'Type'),type); % ishghandlehere(val)
-end
-
-function ret = ishghandlehere(x,t)
-if ~exist('octave_core_file_name');
-   ret=ishghandlehere(x,t);
-else;
-   ret=isHGHandleOfType(x,t);
-end;
-end
-
-function ret=newhandle(val)
-if exist('octave_core_file_name');ret=val;
-else;ret=newhandle(val);
-end;
-end
-
 function H = newhatch(A,opts,props)
 
 % 0. retrieve pixel-data conversion parameters
@@ -178,25 +152,26 @@ function H = newhatch(A,opts,props)
 % 6. plot the hatching line
 
 % traverse if hggroup/hgtransform
-if isnumeric(A);A=get(A);A.Children=A.children;A.Visible=A.visible;A.Parent=A.parent;A.DisplayName=A.displayname;end;
 if ishghandlehere(A,'hggroup')
-   if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
+   if ~exist('octave_core_file_name');
+     verless=verLessThan('matlab','8.4');
+   else;
+     verless=1;
+   end;
+   if verless;
       H = cell(1,numel(A));
    else
       H = repmat({matlab.graphics.GraphicsPlaceholder},1,numel(A));
    end
-   for n = 1:numel(A.Children)
-      %try
-         H{n} = newhatch(A.Children(n),opts,props);
-      %catch
-      %end
+   try; tmp=A.Children; catch;tmp=get(A,'Children');end;
+   for n = 1:numel(tmp)
+         H{n} = newhatch(tmp(n),opts,props);  %A loses its property fill heress
    end
-
    H = [H{:}];
    return;
 end
 
-% Modify the base object property if given
+% Modify the base object property if given,
 if ~isempty(props)
    pvalold = sethgprops(A,props);
 end
@@ -204,24 +179,31 @@ end
 try
    vislisena = strcmp(opts.HatchVisible,'auto');
    if vislisena
+      if ~exist('octave_core_file_name');
       vis = A.Visible;
+      else;vis=get(A,'Visible');end;
    else
+      if ~exist('octave_core_file_name');
       vis = opts.HatchVisible;
+      else;vis = get(opts,'HatchVisible');end;
    end
 
+   if ~exist('octave_core_file_name');
    redraw = strcmp(A.Visible,'off') && ~vislisena;
+   else;redraw = strcmp(get(A,'Visible'),'off') && ~vislisena;end;
    if redraw
+     if ~exist('octave_core_file_name');
       A.Visible = 'on'; % momentarily make the patch visible
+      else;set(A,'Visible','on');
+      end;
       drawnow;
    end
 
    % get the base object's vertices & faces
    [V,F,FillFcns] = gethgdata(A); % object does not have its patch data ready
-
    if redraw
       A.Visible = 'off'; % momentarily make the patch visible
    end
-
    if ~isempty(FillFcns)
       FillFcns{1}();
       drawnow;
@@ -234,41 +216,55 @@ try
    [X,Y,Z] = computeHatchData(newhandle(ancestor(A,'axes')),V,F,opts);
 
    % 6. plot the hatching line
-   commonprops = {'Parent',A.Parent,'DisplayName',A.DisplayName,'Visible',vis};
-   if ~strcmp(opts.HatchColor,'auto')
-      commonprops = [commonprops {'Color',opts.HatchColor,'MarkerFaceColor',opts.HatchColor}];
-   end
+   if ~exist('octave_core_file_name'); tmp={A.Parent,A.DisplayName};
+   else; tmp={get(A,'Parent'),get(A,'DisplayName')};end;
+   commonprops = {'Parent',tmp{1},'DisplayName',tmp{2},'Visible',vis};
    if isempty(regexp(opts.HatchStyle,'speckle$','once'))
-      H = line(X,Y,Z,commonprops{:},'LineStyle',opts.HatchLineStyle','LineWidth',opts.HatchLineWidth);
+    H = line(X,Y,Z,commonprops{:},'LineStyle',opts.HatchLineStyle','LineWidth',opts.HatchLineWidth);
    else
-      H = line(X,Y,Z,commonprops{:},'LineStyle','none','Marker',opts.SpeckleMarkerStyle,...
-         'MarkerSize',opts.SpeckleSize,'Parent',A.Parent,'DisplayName',A.DisplayName);
+    H = line(X,Y,Z,commonprops{:},'LineStyle','none','Marker',opts.SpeckleMarkerStyle,...
+         'MarkerSize',opts.SpeckleSize,'Parent',tmp{1},'DisplayName',tmp{2});
    end
 
    if strcmp(opts.HatchColor,'auto')
       syncColor(H,A);
    end
 
+
    if isempty(H)
       error('Unable to obtain hatching data from the specified object A.');
    end
 
    % 7. Move H so that it is place right above A in parent's uistack
-   p = newhandle(A.Parent);
-   Hcs = newhandle(p.Children);
+   if exist('octave_core_file_name');
+     p=newhandle(get(A,'Parent'));Hcs = newhandle(get(p,'Children'));
+   else;
+     p = newhandle(A.Parent);
+     Hcs = newhandle(p.Children);
+   end;
    [~,idx] = ismember(A,Hcs); % always idx(1)>idx(2) as H was just created
+   if exist('octave_core_file_name');
+   tmp=get(p,'Children');
+   set(p,'Children',tmp([2:idx-1 1 idx:end]));
+   else;
    p.Children = p.Children([2:idx-1 1 idx:end]);
-
+   end;
    % if HG1, all done | no dynamic adjustment support
-   if ~exist('octave_core_file_name');verless=verLessThan('matlab','8.4');else;verless=1;end;if verless;
+   if ~exist('octave_core_file_name');
+   if verLessThan('matlab','8.4') ;
       return;
-   end
+   end;
+   else;return
+   end;
 
    % save the config data & set up the object listeners
    setappdata(A,'HatchFill2Opts',opts); % hatching options
    setappdata(A,'HatchFill2Obj',H); % hatching line object
    setappdata(A,'HatchFill2LastData',{V,F}); % last patch data
-   setappdata(A,'HatchFill2LastVisible',A.Visible); % last sensitive properties
+   if ~exist('octave_core_file_name');setappdata(A,'HatchFill2LastVisible',A.Visible);
+    else;setappdata(A,'HatchFill2LastVisible',get(A,'Visible'));
+   % last sensitive properties
+   end;
    setappdata(A,'HatchFill2PostMarkedClean',{}); % run this function at the end of the MarkClean callback and set NoAction flag
    setappdata(A,'HatchFill2NoAction',false); % no action during next MarkClean callback, callback only clears this flag
    setappdata(H,'HatchFill2MatchVisible',vislisena);
@@ -292,8 +288,7 @@ try
       lis(n+2) = addlistener(A,syncprops{n},'PostSet',@syncProperty);
    end
 
-catch ME
-   if isnumeric(A);A=get(A);end;
+catch ME;
    % something went wrong, restore the base object properties
    if ~isempty(props)
       for pname = fieldnames(pvalold)'
@@ -319,6 +314,12 @@ end
 %             - check if vertex & face changed; if so redraw hatch
 %             - check if hatch redraw triggered the event due to object's
 %               face not shown; if so clear the flag
+
+function ret=newhandle(val)
+if exist('octave_core_file_name');ret=val;
+else;ret=handle(val);
+end;
+end
 
 function objMarkedClean(hp,~)
 % CALLBACK for base object's MarkedClean event
@@ -458,7 +459,6 @@ for n = 1:N % for each face
    [v,T,islog] = transform_data(ax,V(f,:),[]); % transform the face
    if isempty(v) % face is not hatchable
       continue;
-      continue;
    end
 
    % 2. get xdata & ydata of hatching lines for each face
@@ -481,6 +481,36 @@ XYZ = cat(2,XYZc{:});
 
 end
 
+function b = isHGHandleOfType(val, type)
+% Returns true if val is a hghandle and is the same type as the input type.
+
+% Copyright 2012-2017 The MathWorks, Inc.
+
+if exist('octave_core_file_name');
+convertStringsToChars=@(x)x;
+%do nothing for octave
+end;
+%input must be cell of character scalar vector or
+
+if nargin > 0
+    val = convertStringsToChars(val);
+end
+
+if nargin > 1
+    type = convertStringsToChars(type);
+end
+
+b = isgraphics(val) && strcmpi(get(val,'Type'),type); % ishghandlehere(val)
+end
+
+function ret = ishghandlehere(x,t)
+if ~exist('octave_core_file_name');
+   ret=ishghandle(x,t);
+else;
+   ret=isHGHandleOfType(x,t);
+end;
+end
+
 function tf = issupported(hbase)
 % check if all of the given base objects are supported
 
@@ -501,10 +531,9 @@ end
 % synchronize hatching line color to the patch's edge color if HatchColor =
 % 'auto'
 function syncColor(H,A)
-tmp=getappdata(H,'HatchFill2MatchColor');
-if exist('octave_core_file_name') && numel(tmp)==0;
-   return;
-elseif ~getappdata(H,'HatchFill2MatchColor')
+tmp=(getappdata(H,'HatchFill2MatchColor'));
+if exist('octave_core_file_name'); tmp=cell2mat(tmp); end;
+if ~tmp;
    % do not sync
    return;
 end
@@ -514,18 +543,23 @@ if ishghandlehere(A,'patch') || ishghandlehere(A,'Bar') || ishghandlehere(A,'are
    pname = 'EdgeColor';
 elseif ishghandlehere(A,'contour') % HG2
    pname = 'LineColor';
+%octave
+elseif ishghandlehere(A,'hggroup') &&...
+ get(A,'Tag')=='HatchingRegion'; pname= 'LineColor';
 end
-color = A.(pname);
+if exist('octave_core_file_name');color = get(A,pname);else;color = A.(pname);end;
 if strcmp(color,'flat')
    try
       color = double(A.Edge(1).ColorData(1:3)')/255;
    catch
       warning('Does not support CData based edge color.');
       color = 'k';
-   end
+   end;
 end
-H.Color = color;
-H.MarkerFaceColor = color;
+
+if exist('octave_core_file_name'); set(H,'Color',color);set(H,'MarkerFaceColor',color);
+else;H.Color = color;H.MarkerFaceColor = color;end;
+
 
 end
 
@@ -534,20 +568,23 @@ function [V,F,FillFcns] = gethgdata(A)
 % properties to observe change in the hatching area
 
 % initialize the output variable
-if  ~exist('isvalid');isvalid=@(x)true;end;
 F = [];
 V = [];
 FillFcns = {};
-
-if ~isvalid(A) || strcmp(A.Visible,'off')
-   return;
-end
-
+if  ~exist('isvalid');isvalid=@(x)true;end;
+if  exist('octave_core_file_name');tmp=get(A,'Visible');
+else;tmp=A.Visible;end;
+if ~isvalid(A) || strcmp(tmp,'off');return;end;
 if ishghandlehere(A,'patch')
+  if  ~exist('octave_core_file_name');
    V = A.Vertices;
    F = A.Faces;
+   else;
+   V = get(A,'Vertices');
+   F = get(A,'Faces');
+   end;
 elseif ishghandlehere(A,'bar')
-   [V,F] = getQuadrilateralData(A.Face);
+   try;[V,F] = getQuadrilateralData(get(A).Face);catch;[V,F] = getQuadrilateralData(A.Face);end;
 elseif ishghandlehere(A,'area')
    [V,F] = getTriangleStripData(A.Face);
    set(A,'FaceColor','none');
@@ -558,15 +595,23 @@ elseif ishghandlehere(A,'surface') % HG2
    end
    [V,F] = getQuadrilateralData(A.Face);
 elseif ishghandlehere(A,'contour') % HG2
-
    % Retrieve data from hidden FacePrims property (a TriangleStrip object)
-   if strcmp(A.Fill,'off')
+   if exist('octave_core_file_name');tmp=get(A,'Fill');else;tmp=A.Fill;end;
+   if strcmp(tmp,'off');
       FillFcns = {@()set(A,'Fill','on'),@()set(A,'Fill','off')};
       return;
    end
    [V,F] = getTriangleStripData(A.FacePrims);
 elseif ishghandlehere(A,'histogram') %HG2: Quadrateral underlying data object
    [V,F] = getQuadrilateralData(A.NodeChildren(4));
+elseif 0&&ishghandlehere(A,'hggroup') && strcmpi(get(A,'Tag'),'HatchingRegion');
+   %if isnumeric(A);tmp=get(A);else;tmp=A;end;  %struct is case sensitive
+   if exist('octave_core_file_name');tmp=get(A,'Fill');else;tmp=A.Fill;end;
+   if strcmp(tmp,'off');
+      FillFcns = {@()set(A,'Fill','on'),@()set(A,'Fill','off')};
+      return;
+   end
+   [V,F] = getTriangleStripData(A.FacePrims);
 end
 
 end
@@ -669,19 +714,30 @@ end
 
 function pvalold = sethgprops(A,props)
 % grab the common property names of the base objects
-
+pvalold=struct();
 pnames = fieldnames(props);
-if ishghandlehere(A,'hggroup')
+hctest=ishghandlehere(A,'hggroup');
+if ~hctest && exist('octave_core_file_name');
+  hctest=~strcmpi(get(A,'Tag'),'HatchingRegion');
+end;
+if hctest;
    gpnames = fieldnames(set(A));
    [tf,idx] = ismember(gpnames,pnames);
    idx(~tf) = [];
    for i = idx'
+      try;
       pvalold.(pnames{i}) = A.(pnames{i});
       A.(pnames{i}) = props.(pnames{i});
+      catch;
+      setfield(pvalold,(pnames{i}),get(A,(pnames{i})));
+      set(A,(pnames{i}),getfield(props,(pnames{i})));
+      end;
    end
    props = rmfield(props,pnames(idx));
 
-   h = newhandle(A.Children);
+   if ~exist('octave_core_file_name');h = newhandle(A.Children);
+     else;h = newhandle(get(A,'Children'));
+   end
    for n = 1:numel(h)
       pvalold1 = sethgprops(h(n),props);
       ponames = fieldnames(pvalold1);
@@ -690,11 +746,18 @@ if ishghandlehere(A,'hggroup')
       end
    end
 else
-   if isnumeric(A);A=get(A);end;
    for n = 1:numel(pnames)
+      try;
+      %disp(get(A,'Type'));disp(pnames{n});disp(props);
       pvalold.(pnames{n}) = A.(pnames{n});
       A.(pnames{n}) = props.(pnames{n});
+      catch;
+      %disp(get(A,'Type'));disp(pnames{n});disp(props);
+      setfield(pvalold,(pnames{n}),get(A,(pnames{n})));
+      set(A,(pnames{n}),getfield(props,(pnames{n})));
+      end;
    end
+   %try;disp(A.fill);catch;end; %%
 end
 
 end
@@ -816,7 +879,9 @@ xi = xi(fnd1);
 % Add '2' to make sure we don't have problems going from a max(xi)
 % to a min(xi) on the next line (yi incremented by one)
 xi0 = min(xi); xi1 = max(xi);
-ci = 2*yi*(xi1-xi0)+xi;
+if any([length(xi1) length(xi0) length(xi)]==0); ci=[];
+else ci = 2*yi*(xi1-xi0)+xi;  %matlab allow it
+end;
 [~,num] = sort(ci);
 xi = xi(num); yi = yi(num);
 
@@ -894,9 +959,9 @@ function [h,opts,props] = parse_input(h,argin)
 
 patchtypes = {'single','cross','speckle','outspeckle','fill','none'};
 
-% get base object handle
+% get base object newhandle
 if ~issupported(h)
-   error('Unsupported graphics handle type.');
+   error('Unsupported graphics newhandle type.');
 end
 h = newhandle(h);
 
@@ -1010,13 +1075,21 @@ function [V,T,islog] = transform_data(ax,V,ref)
 % - transformed xy-data are then normalized by the projected axes spans.
 
 noZ = size(V,2)==2;
+%tmp=ax;
+%ax=
 
+if  ~exist('octave_core_file_name');
 xl = ax.XLim;
 yl = ax.YLim;
 zl = ax.ZLim;
+else;
+xl = get(ax,'XLim');
+yl = get(ax,'YLim');
+zl = get(ax,'ZLim');
+end;
 
-% log to linear space
-islog = strcmp({ax.XScale ax.YScale ax.ZScale},'log');
+if  ~exist('octave_core_file_name');islog = strcmp({ax.XScale ax.YScale ax.ZScale},'log');
+else;islog = strcmp({get(ax,'XScale') get(ax,'YScale') get(ax,'ZScale')},'log');end;
 if islog(1)
    V(:,1) = log10(V(:,1));
    xl = log10(xl);
@@ -1136,3 +1209,4 @@ if islog(3)
 end
 
 end
+

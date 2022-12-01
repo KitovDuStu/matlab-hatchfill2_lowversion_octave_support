@@ -32,7 +32,9 @@ hp = findobj(gca,'Tag','HatchingRegion1');
 h.Fill2 = fill3([t(1);t';t(end)],[0;imag(PSI);0],zeros(length(t)+2,1),'g','EdgeColor','g','LineWidth',1,'EdgeAlpha',0.5,'FaceAlpha',0.15);
 set(h.Fill2,'Tag','HatchingRegion2');
 hp = findobj(gca,'Tag','HatchingRegion2');
-hh = hatchfill2(hp,'cross','LineWidth',1,'FaceColor','none','HatchStyle','single','HatchAngle',90,'HatchSpacing',25);
+params={'LineWidth',1,'FaceColor','none','HatchStyle','single','HatchAngle',90,'HatchSpacing',25};
+if exist('octave_core_file_name');params={};end;
+hh = hatchfill2(hp,'cross',params{:});
 
 
 %AXES AND VIEW
